@@ -29,10 +29,10 @@ func createFile(id string, ownerID string, projectID *string, fileName string, m
 		return File{}, fmt.Errorf("size cannot be negative")
 	}
 
-	if visibility.IsValid() == false {
+	if !visibility.IsValid() {
 		return File{}, fmt.Errorf("invalid visibility value")
 	}
-	if status.IsValid() == false {
+	if !status.IsValid() {
 		return File{}, fmt.Errorf("invalid status value")
 	}
 
