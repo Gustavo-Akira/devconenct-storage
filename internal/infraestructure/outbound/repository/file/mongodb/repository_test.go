@@ -100,6 +100,7 @@ func TestMongoFileRepository_Save_ShouldNotPersistWithoutId(t *testing.T) {
 	require.NoError(t, err)
 
 	file, err := domain.NewFile(
+		"2",
 		"owner-123",
 		nil,
 		"test.txt",

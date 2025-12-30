@@ -32,6 +32,12 @@ func (m *FileStorageMock) DeleteFile(ctx context.Context, file domain.File) erro
 	return m.DeleteFileFn(ctx, file)
 }
 
+type IdGeneratorMock struct{}
+
+func (gen *IdGeneratorMock) Generate() string {
+	return "1"
+}
+
 func TestUploadFileUseCase_Success(t *testing.T) {
 	ctx := context.Background()
 	repoCalled := false
@@ -59,6 +65,7 @@ func TestUploadFileUseCase_Success(t *testing.T) {
 	uc := UploadFileUseCase{
 		fileRepository: repo,
 		storage:        storage,
+		generator:      &IdGeneratorMock{},
 	}
 
 	cmd := UploadFileCommand{
@@ -105,6 +112,7 @@ func TestUploadFileUseCase_Execute_ErrorOnRepositorySave(t *testing.T) {
 	uc := UploadFileUseCase{
 		fileRepository: repo,
 		storage:        storage,
+		generator:      &IdGeneratorMock{},
 	}
 
 	cmd := UploadFileCommand{
@@ -150,6 +158,7 @@ func TestUploadFileUseCase_Execute_ErrorOnCreateFileDomain(t *testing.T) {
 	uc := UploadFileUseCase{
 		fileRepository: repo,
 		storage:        storage,
+		generator:      &IdGeneratorMock{},
 	}
 
 	cmd := UploadFileCommand{
@@ -195,6 +204,7 @@ func TestUploadFileUseCase_Execute_ErrorOnMarkAvailableDomain(t *testing.T) {
 	uc := UploadFileUseCase{
 		fileRepository: repo,
 		storage:        storage,
+		generator:      &IdGeneratorMock{},
 	}
 
 	cmd := UploadFileCommand{
@@ -241,6 +251,7 @@ func TestUploadFileUseCase_Execute_ErrorOnStorageSave(t *testing.T) {
 	uc := UploadFileUseCase{
 		fileRepository: repo,
 		storage:        storage,
+		generator:      &IdGeneratorMock{},
 	}
 
 	cmd := UploadFileCommand{
@@ -263,7 +274,9 @@ func TestUploadFileUseCase_Execute_ErrorOnStorageSave(t *testing.T) {
 func TestShouldCreateUseCaseWhenPassRepoAndStorage(t *testing.T) {
 	fileRepositoryMock := &FileRepositoryMock{}
 	fileStorageMock := &FileStorageMock{}
-	uc := NewUploadFileUseCase(fileRepositoryMock, fileStorageMock)
+	generatorMock := &IdGeneratorMock{}
+	uc := NewUploadFileUseCase(fileRepositoryMock, fileStorageMock, generatorMock)
 	assert.Equal(t, uc.fileRepository, fileRepositoryMock)
 	assert.Equal(t, uc.storage, fileStorageMock)
+	assert.Equal(t, uc.generator, generatorMock)
 }
