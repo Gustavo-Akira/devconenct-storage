@@ -8,9 +8,36 @@ jobs:
   build-test:
     name: Build & Test
     runs-on: ubuntu-latest
-
+    services:
+      minio:
+        image: minio/minio
+        ports:
+          - 9000:9000
+        options: >-
+          --user root
+          --health-cmd "mc ready local"
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+          COMMAND: server /data
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Wait for MinIO service to be ready
+        run: |
+          curl -f http://localhost:9000/minio/health/live || exit 1
+          # Alternatively, use the 'mc' command with a setup action
+          # uses: hostwithquantum/setup-mc@v1
+          # run: mc ready local
+        
+      - name: Configure MinIO client and create a bucket
+        run: |
+          mc alias set local http://localhost:9000 minioadmin minioadmin
+          mc mb local/test-bucket
+          mc ls local
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
 
       - name: Set up Go
         uses: actions/setup-go@v5
