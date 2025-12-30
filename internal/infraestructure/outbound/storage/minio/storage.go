@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/google/uuid"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
@@ -62,12 +61,11 @@ func (storage MinIOStorage) DeleteFile(ctx context.Context, file domain.File) er
 }
 
 func buildObjectKey(file domain.File) string {
-	random := uuid.New()
 	if file.ProjectID() != nil {
 		return fmt.Sprintf(
 			"%s/%s/%s/%s",
 			file.OwnerID(),
-			random,
+			file.ID(),
 			*file.ProjectID(),
 			file.FileName(),
 		)
@@ -75,7 +73,7 @@ func buildObjectKey(file domain.File) string {
 	return fmt.Sprintf(
 		"%s/%s/%s",
 		file.OwnerID(),
-		random,
+		file.ID(),
 		file.FileName(),
 	)
 }

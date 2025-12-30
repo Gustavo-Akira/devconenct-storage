@@ -19,6 +19,9 @@ type File struct {
 }
 
 func createFile(id string, ownerID string, projectID *string, fileName string, mimeType string, size int64, storageKey string, visibility Visibility, status Status, createdAt time.Time) (File, error) {
+	if id == "" {
+		return File{}, fmt.Errorf("id cannot be empty")
+	}
 	if ownerID == "" {
 		return File{}, fmt.Errorf("ownerID cannot be empty")
 	}
@@ -54,14 +57,12 @@ func createFile(id string, ownerID string, projectID *string, fileName string, m
 	}, nil
 }
 
-func NewFile(ownerID string, projectID *string, fileName string, mimeType string, size int64, visibility Visibility) (File, error) {
-	return createFile("", ownerID, projectID, fileName, mimeType, size, "", visibility, StatusPending, time.Now())
+func NewFile(id string, ownerID string, projectID *string, fileName string, mimeType string, size int64, visibility Visibility) (File, error) {
+
+	return createFile(id, ownerID, projectID, fileName, mimeType, size, "", visibility, StatusPending, time.Now())
 }
 
 func RehydrateFile(id string, ownerID string, projectID *string, fileName string, mimeType string, size int64, storageKey string, visibility Visibility, status Status, createdAt time.Time) (File, error) {
-	if id == "" {
-		return File{}, fmt.Errorf("id cannot be empty")
-	}
 	return createFile(id, ownerID, projectID, fileName, mimeType, size, storageKey, visibility, status, createdAt)
 }
 

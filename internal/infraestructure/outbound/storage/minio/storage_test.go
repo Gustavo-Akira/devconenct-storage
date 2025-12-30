@@ -68,7 +68,7 @@ func TestMinIOStorage_WithTestContainer(t *testing.T) {
 	content := []byte("file content")
 	reader := bytes.NewReader(content)
 
-	file, err := domain.NewFile("owner-123", nil, "test.txt", "text/plain", int64(len(content)), domain.VisibilityPublic)
+	file, err := domain.NewFile("1", "owner-123", nil, "test.txt", "text/plain", int64(len(content)), domain.VisibilityPublic)
 	require.NoError(t, err)
 
 	key, err := client.SaveFile(ctx, reader, file)
@@ -86,7 +86,7 @@ func TestMinIOStorage_WithTestContainer(t *testing.T) {
 func TestMinIOStorage_ShoulReturnErrorOnDeleteWithoutStorageKey(t *testing.T) {
 	ctx := context.Background()
 	content := []byte("file content")
-	file, err := domain.NewFile("owner-123", nil, "test.txt", "text/plain", int64(len(content)), domain.VisibilityPublic)
+	file, err := domain.NewFile("1", "owner-123", nil, "test.txt", "text/plain", int64(len(content)), domain.VisibilityPublic)
 	require.NoError(t, err)
 	client, err := NewMinIOStorage("localhost:9000", "minioadmin", "minioadmin", false, "test")
 	require.NoError(t, err)

@@ -9,6 +9,7 @@ func TestNewFile_SetsCreatedAt(t *testing.T) {
 	before := time.Now()
 
 	file, err := NewFile(
+		"1",
 		"user-1",
 		nil,
 		"file.txt",
@@ -29,6 +30,7 @@ func TestNewFile_SetsCreatedAt(t *testing.T) {
 
 func TestNewFile_StatusIsPending(t *testing.T) {
 	file, err := NewFile(
+		"1",
 		"user-1",
 		nil,
 		"file.txt",
@@ -46,8 +48,8 @@ func TestNewFile_StatusIsPending(t *testing.T) {
 	if file.StorageKey() != "" {
 		t.Errorf("expected empty storageKey")
 	}
-	if file.ID() != "" {
-		t.Errorf("expected empty ID")
+	if file.ID() == "" {
+		t.Errorf("expected non-empty ID")
 	}
 	if file.OwnerID() != "user-1" {
 		t.Errorf("ownerID mismatch")
@@ -227,6 +229,7 @@ func TestRehydrateFile_Success(t *testing.T) {
 
 func TestMarkAsAvailable_Success(t *testing.T) {
 	file, _ := NewFile(
+		"1",
 		"user-1",
 		nil,
 		"file.txt",
@@ -271,6 +274,7 @@ func TestMarkAsAvailable_InvalidTransition(t *testing.T) {
 
 func TestMarkAsAvailable_EmptyStorageKey(t *testing.T) {
 	file, _ := NewFile(
+		"1",
 		"user-1",
 		nil,
 		"file.txt",
