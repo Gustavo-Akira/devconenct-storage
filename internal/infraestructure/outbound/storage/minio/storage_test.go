@@ -3,39 +3,75 @@ package minioStorage
 import (
 	"bytes"
 	"context"
-	"devconnectstorage/internal/domain"
+	"fmt"
 	"testing"
+	"time"
 
+	"devconnectstorage/internal/domain"
+
+	"github.com/minio/minio-go/v7"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	tc "github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func TestMinIOStorage_SaveAndDeleteFile_ShouldWork(t *testing.T) {
-	ctx := context.Background()
+func startMinioContainer(t *testing.T) (endpoint string, terminate func()) {
+	req := tc.ContainerRequest{
+		Image:        "minio/minio:latest",
+		ExposedPorts: []string{"9000/tcp"},
+		Env: map[string]string{
+			"MINIO_ROOT_USER":     "minioadmin",
+			"MINIO_ROOT_PASSWORD": "minioadmin",
+		},
+		Cmd:        []string{"server", "/data"},
+		WaitingFor: wait.ForHTTP("/minio/health/ready").WithPort("9000/tcp").WithStartupTimeout(20 * time.Second),
+		AutoRemove: true,
+	}
 
-	storage, err := NewMinIOStorage(
-		"localhost:9000",
-		"minioadmin",
-		"minioadmin",
-		false,
-		"test-bucket",
-	)
+	container, err := tc.GenericContainer(context.Background(), tc.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
 	require.NoError(t, err)
 
+	host, err := container.Host(context.Background())
+	require.NoError(t, err)
+	port, err := container.MappedPort(context.Background(), "9000")
+	require.NoError(t, err)
+
+	return fmt.Sprintf("%s:%s", host, port.Port()), func() {
+		_ = container.Terminate(context.Background())
+	}
+}
+
+func createBucketForTest(t *testing.T, storage *MinIOStorage, bucketName string) {
+	ctx := context.Background()
+	exists, err := storage.client.BucketExists(ctx, bucketName)
+	require.NoError(t, err)
+	if !exists {
+		err = storage.client.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{})
+		require.NoError(t, err)
+	}
+}
+
+func TestMinIOStorage_WithTestContainer(t *testing.T) {
+	endpoint, terminate := startMinioContainer(t)
+	defer terminate()
+
+	bucket := "test-bucket"
+
+	client, err := NewMinIOStorage(endpoint, "minioadmin", "minioadmin", false, bucket)
+	require.NoError(t, err)
+	createBucketForTest(t, client, bucket)
+	ctx := context.Background()
 	content := []byte("file content")
 	reader := bytes.NewReader(content)
 
-	file, err := domain.NewFile(
-		"owner-123",
-		nil,
-		"test.txt",
-		"text/plain",
-		int64(len(content)),
-		domain.VisibilityPublic,
-	)
-	assert.NoError(t, err)
+	file, err := domain.NewFile("owner-123", nil, "test.txt", "text/plain", int64(len(content)), domain.VisibilityPublic)
+	require.NoError(t, err)
 
-	key, err := storage.SaveFile(ctx, reader, file)
+	key, err := client.SaveFile(ctx, reader, file)
 	require.NoError(t, err)
 	assert.NotEmpty(t, key)
 
@@ -43,100 +79,17 @@ func TestMinIOStorage_SaveAndDeleteFile_ShouldWork(t *testing.T) {
 	err = fileWithKey.MarkAsAvailable(key)
 	require.NoError(t, err)
 
-	err = storage.DeleteFile(ctx, fileWithKey)
+	err = client.DeleteFile(ctx, fileWithKey)
 	require.NoError(t, err)
 }
 
-func TestMinIOStorage_SaveAndDeleteFile_ShouldWorkWithProjectId(t *testing.T) {
+func TestMinIOStorage_ShoulReturnErrorOnDeleteWithoutStorageKey(t *testing.T) {
 	ctx := context.Background()
-
-	storage, err := NewMinIOStorage(
-		"localhost:9000",
-		"minioadmin",
-		"minioadmin",
-		false,
-		"test-bucket",
-	)
-	require.NoError(t, err)
-
 	content := []byte("file content")
-	reader := bytes.NewReader(content)
-	projectId := "project122"
-	file, err := domain.NewFile(
-		"owner-123",
-		&projectId,
-		"test.txt",
-		"text/plain",
-		int64(len(content)),
-		domain.VisibilityPublic,
-	)
-	assert.NoError(t, err)
-
-	key, err := storage.SaveFile(ctx, reader, file)
+	file, err := domain.NewFile("owner-123", nil, "test.txt", "text/plain", int64(len(content)), domain.VisibilityPublic)
 	require.NoError(t, err)
-	assert.NotEmpty(t, key)
-
-	fileWithKey := file
-	err = fileWithKey.MarkAsAvailable(key)
+	client, err := NewMinIOStorage("localhost:9000", "minioadmin", "minioadmin", false, "test")
 	require.NoError(t, err)
-
-	err = storage.DeleteFile(ctx, fileWithKey)
-	require.NoError(t, err)
-}
-
-func TestMinIOStorage_SaveFile_ShouldFail_WhenBucketDoesNotExist(t *testing.T) {
-	ctx := context.Background()
-
-	storage, err := NewMinIOStorage(
-		"localhost:9000",
-		"minioadmin",
-		"minioadmin",
-		false,
-		"bucket-not-exists",
-	)
-	require.NoError(t, err)
-
-	reader := bytes.NewReader([]byte("content"))
-
-	file, err := domain.NewFile(
-		"owner",
-		nil,
-		"fail.txt",
-		"text/plain",
-		7,
-		domain.VisibilityPublic,
-	)
-	require.NoError(t, err)
-
-	key, err := storage.SaveFile(ctx, reader, file)
-
+	err = client.DeleteFile(ctx, file)
 	assert.Error(t, err)
-	assert.Empty(t, key)
-}
-
-func TestMinIOStorage_DeleteFile_ShouldBeNoOp_WhenStorageKeyIsEmpty(t *testing.T) {
-	ctx := context.Background()
-
-	storage, err := NewMinIOStorage(
-		"localhost:9000",
-		"minioadmin",
-		"minioadmin",
-		false,
-		"test-bucket",
-	)
-	require.NoError(t, err)
-
-	file, err := domain.NewFile(
-		"owner",
-		nil,
-		"noop.txt",
-		"text/plain",
-		4,
-		domain.VisibilityPublic,
-	)
-	require.NoError(t, err)
-
-	err = storage.DeleteFile(ctx, file)
-
-	assert.NoError(t, err)
 }

@@ -3,6 +3,7 @@ package minioStorage
 import (
 	"context"
 	"devconnectstorage/internal/domain"
+	"errors"
 	"fmt"
 	"io"
 
@@ -49,7 +50,7 @@ func (storage MinIOStorage) SaveFile(ctx context.Context, fileBytes io.Reader, f
 
 func (storage MinIOStorage) DeleteFile(ctx context.Context, file domain.File) error {
 	if file.StorageKey() == "" {
-		return nil
+		return errors.New("Storage key nil on delete")
 	}
 
 	return storage.client.RemoveObject(
