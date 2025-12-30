@@ -14,6 +14,7 @@ jobs:
         ports:
           - 9000:9000
         options: >-
+          server /data
           --user root
           --health-cmd "mc ready local"
         env:
