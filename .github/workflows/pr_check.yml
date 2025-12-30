@@ -17,12 +17,7 @@ jobs:
           MINIO_ROOT_USER: minioadmin
           MINIO_ROOT_PASSWORD: minioadmin
         options: >-
-          server /data
-          --console-address ":9001"
-          --health-cmd "curl -f http://localhost:9000/minio/health/live || exit 1"
-          --health-interval 5s
-          --health-timeout 2s
-          --health-retries 5
+          server /data --console-address ":9001"
     steps:
       - uses: actions/checkout@v4
       
