@@ -50,7 +50,7 @@ func (storage MinIOStorage) SaveFile(ctx context.Context, fileBytes io.Reader, f
 
 func (storage MinIOStorage) DeleteFile(ctx context.Context, file domain.File) error {
 	if file.StorageKey() == "" {
-		return errors.New("Storage key nil on delete")
+		return errors.New("storage key nil on delete")
 	}
 
 	return storage.client.RemoveObject(
