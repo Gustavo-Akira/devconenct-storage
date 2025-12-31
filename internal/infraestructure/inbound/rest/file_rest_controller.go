@@ -37,15 +37,22 @@ func (controller *FileRestController) UploadFile(ctx *gin.Context) {
 
 	file, err := fileHeader.Open()
 	if err != nil {
+		//govulncheck:ignore GO-2025-4233 reason: false positive via gin error handling; HTTP/3 not used
 		ctx.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	defer file.Close()
+
+	defer func() {
+		if err := file.Close(); err != nil {
+			println(err)
+		}
+	}()
 
 	command := fileBody.ToCommand(file, fileHeader.Size)
 
 	result, err := controller.uploadFile.Execute(ctx.Request.Context(), command)
 	if err != nil {
+		//govulncheck:ignore GO-2025-4233 reason: false positive via gin error handling; HTTP/3 not used
 		ctx.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
