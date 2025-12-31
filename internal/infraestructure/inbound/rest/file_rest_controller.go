@@ -1,0 +1,48 @@
+package rest
+
+import (
+	uploadfile "devconnectstorage/internal/application/usecase/upload_file"
+	"devconnectstorage/internal/infraestructure/inbound/rest/dto"
+
+	"github.com/gin-gonic/gin"
+)
+
+type FileRestController struct {
+	uploadFile uploadfile.IUploadFileUseCase
+}
+
+func (controller *FileRestController) UploadFile(ctx *gin.Context) {
+	var fileBody dto.UploadFileRequest
+
+	if err := ctx.ShouldBind(&fileBody); err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	fileHeader, err := ctx.FormFile("file")
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": "file is required"})
+		return
+	}
+
+	if fileHeader.Size <= 0 {
+		ctx.JSON(400, gin.H{"error": "file size cannot be 0"})
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		ctx.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	defer file.Close()
+
+	command := fileBody.ToCommand(file, fileHeader.Size)
+
+	result, err := controller.uploadFile.Execute(ctx.Request.Context(), command)
+	if err != nil {
+		ctx.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(201, result)
+}
