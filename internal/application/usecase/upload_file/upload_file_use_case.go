@@ -22,7 +22,7 @@ func NewUploadFileUseCase(repo port.FileRepository, storage port.Storage, genera
 
 func (uc UploadFileUseCase) Execute(ctx context.Context, saveCommand UploadFileCommand) (domain.File, error) {
 
-	file, domainErr := domain.NewFile("1", saveCommand.OwnerID, saveCommand.ProjectID, saveCommand.FileName, saveCommand.MimeType, saveCommand.Size, domain.Visibility(saveCommand.Visibility))
+	file, domainErr := domain.NewFile(uc.generator.Generate(), saveCommand.OwnerID, saveCommand.ProjectID, saveCommand.FileName, saveCommand.MimeType, saveCommand.Size, domain.Visibility(saveCommand.Visibility))
 	if domainErr != nil {
 		return domain.File{}, domainErr
 	}
