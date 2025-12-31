@@ -8,6 +8,6 @@ import (
 
 func TestUUIDGenerator_ShouldGenerateARandomUUID(t *testing.T) {
 	generator := &UUIDGenerator{}
-	id := generator.NewID()
+	id := generator.Generate()
 	assert.NotEmpty(t, id)
 }

@@ -11,6 +11,12 @@ type FileRestController struct {
 	uploadFile uploadfile.IUploadFileUseCase
 }
 
+func NewFileRestController(usecase uploadfile.IUploadFileUseCase) *FileRestController {
+	return &FileRestController{
+		uploadFile: usecase,
+	}
+}
+
 func (controller *FileRestController) UploadFile(ctx *gin.Context) {
 	var fileBody dto.UploadFileRequest
 
