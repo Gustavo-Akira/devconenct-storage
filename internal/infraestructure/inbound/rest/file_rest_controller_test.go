@@ -51,9 +51,9 @@ func TestUploadFile_ShouldReturn201_WhenRequestIsValid(t *testing.T) {
 	_ = writer.WriteField("file_name", "test.txt")
 
 	part, _ := writer.CreateFormFile("file", "test.txt")
-	part.Write([]byte("file content"))
+	_, _ = part.Write([]byte("file content"))
 
-	writer.Close()
+	_ = writer.Close()
 
 	req := httptest.NewRequest(
 		http.MethodPost,
@@ -103,7 +103,7 @@ func TestUploadFile_ShouldReturn400_WhenFileIsMissing(t *testing.T) {
 	_ = writer.WriteField("project_id", "123")
 	_ = writer.WriteField("mime_type", "plain/text")
 	_ = writer.WriteField("file_name", "test.txt")
-	writer.Close()
+	_ = writer.Close()
 
 	req := httptest.NewRequest(
 		http.MethodPost,
@@ -138,7 +138,7 @@ func TestUploadFile_ShouldReturn400_WhenRequiredMetadataIsMissing(t *testing.T) 
 	_ = writer.WriteField("project_id", "123")
 	_ = writer.WriteField("mime_type", "plain/text")
 	_ = writer.WriteField("file_name", "test.txt")
-	writer.Close()
+	_ = writer.Close()
 
 	req := httptest.NewRequest(
 		http.MethodPost,
@@ -171,9 +171,9 @@ func TestUploadFile_ShouldReturn400_WhenFileSizeIsZero(t *testing.T) {
 	_ = writer.WriteField("mime_type", "text/plain")
 	_ = writer.WriteField("file_name", "empty.txt")
 
-	writer.CreateFormFile("file", "empty.txt")
+	_, _ = writer.CreateFormFile("file", "empty.txt")
 
-	writer.Close()
+	_ = writer.Close()
 
 	req := httptest.NewRequest(http.MethodPost, "/files", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
@@ -204,9 +204,9 @@ func TestUploadFile_ShouldReturn500_WhenUseCaseFails(t *testing.T) {
 	_ = writer.WriteField("mime_type", "plain/text")
 	_ = writer.WriteField("file_name", "test.txt")
 	part, _ := writer.CreateFormFile("file", "test.txt")
-	part.Write([]byte("content"))
+	_, _ = part.Write([]byte("content"))
 
-	writer.Close()
+	_ = writer.Close()
 
 	req := httptest.NewRequest(
 		http.MethodPost,

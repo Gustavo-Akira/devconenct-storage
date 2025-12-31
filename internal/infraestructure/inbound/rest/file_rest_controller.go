@@ -40,7 +40,12 @@ func (controller *FileRestController) UploadFile(ctx *gin.Context) {
 		ctx.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	defer file.Close()
+
+	defer func() {
+		if err := file.Close(); err != nil {
+			println(err)
+		}
+	}()
 
 	command := fileBody.ToCommand(file, fileHeader.Size)
 
