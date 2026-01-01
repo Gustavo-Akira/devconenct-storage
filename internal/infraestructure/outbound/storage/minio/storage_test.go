@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"testing"
 	"time"
 
@@ -81,6 +82,52 @@ func TestMinIOStorage_WithTestContainer(t *testing.T) {
 
 	err = client.DeleteFile(ctx, fileWithKey)
 	require.NoError(t, err)
+}
+
+func TestMinIOStorage_ShoulReturnSucessWithStorageKey(t *testing.T) {
+	endpoint, terminate := startMinioContainer(t)
+	defer terminate()
+
+	bucket := "test-bucket"
+
+	client, err := NewMinIOStorage(endpoint, "minioadmin", "minioadmin", false, bucket)
+	require.NoError(t, err)
+	createBucketForTest(t, client, bucket)
+	ctx := context.Background()
+	content := []byte("file content")
+	reader := bytes.NewReader(content)
+
+	file, err := domain.NewFile("1", "owner-123", nil, "test.txt", "text/plain", int64(len(content)), domain.VisibilityPublic)
+	require.NoError(t, err)
+
+	key, err := client.SaveFile(ctx, reader, file)
+	require.NoError(t, err)
+	assert.NotEmpty(t, key)
+
+	returnedFile, err := client.GetFile(ctx, key)
+	require.NotEmpty(t, returnedFile)
+	require.NoError(t, err)
+
+	fileBytes, err := io.ReadAll(returnedFile)
+	require.NoError(t, err)
+	require.NotEmpty(t, fileBytes)
+	_ = returnedFile.Close()
+}
+
+func TestMinIOStorage_ShoulReturnErrorOnGetFileWithoutStorageKey(t *testing.T) {
+	ctx := context.Background()
+	client, err := NewMinIOStorage("localhost:9000", "minioadmin", "minioadmin", false, "test")
+	require.NoError(t, err)
+	_, err = client.GetFile(ctx, "")
+	assert.Equal(t, "storage key cannot be null", err.Error())
+}
+
+func TestMinIOStorage_ShoulReturnErrorOnGetFileWithoutFileInStorage(t *testing.T) {
+	ctx := context.Background()
+	client, err := NewMinIOStorage("localhost:9000", "minioadmin", "minioadmin", false, "test")
+	require.NoError(t, err)
+	_, err = client.GetFile(ctx, "some-key")
+	assert.Error(t, err)
 }
 
 func TestMinIOStorage_ShoulReturnErrorOnDeleteWithoutStorageKey(t *testing.T) {
