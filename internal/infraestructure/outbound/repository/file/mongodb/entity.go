@@ -32,3 +32,18 @@ func NewMongoFileEntity(file domain.File) MongoFileEntity {
 		CreatedAt:  file.CreatedAt(),
 	}
 }
+
+func (m *MongoFileEntity) ToDomain() (domain.File, error) {
+	return domain.RehydrateFile(
+		m.ID,
+		m.OwnerID,
+		m.ProjectID,
+		m.FileName,
+		m.MimeType,
+		m.Size,
+		m.StorageKey,
+		domain.Visibility(m.Visibility),
+		domain.Status(m.Status),
+		m.CreatedAt,
+	)
+}
