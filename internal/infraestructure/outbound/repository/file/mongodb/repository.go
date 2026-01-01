@@ -5,6 +5,7 @@ import (
 	"devconnectstorage/internal/domain"
 	"errors"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -44,4 +45,24 @@ func (repo MongoFileRepository) Save(ctx context.Context, file domain.File) (dom
 		return domain.File{}, errors.New("failed to insert file")
 	}
 	return file, nil
+}
+
+func (repo MongoFileRepository) GetFile(ctx context.Context, id string) (domain.File, error) {
+	filter := bson.M{"_id": id}
+	result := repo.client.Database(repo.database).Collection(repo.collection).FindOne(ctx, filter)
+	if result.Err() != nil {
+		return domain.File{}, result.Err()
+	}
+
+	var mongoFile MongoFileEntity
+	err := result.Decode(&mongoFile)
+	if err != nil {
+		return domain.File{}, err
+	}
+
+	metadata, domainError := mongoFile.ToDomain()
+	if domainError != nil {
+		return domain.File{}, domainError
+	}
+	return metadata, nil
 }

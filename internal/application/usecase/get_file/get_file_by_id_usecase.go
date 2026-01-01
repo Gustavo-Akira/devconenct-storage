@@ -1,6 +1,7 @@
 package getfile
 
 import (
+	"context"
 	"devconnectstorage/internal/application/aggregate"
 	"devconnectstorage/internal/application/usecase/get_file/port"
 )
@@ -17,8 +18,8 @@ func NewGetFileByIdUseCase(repository port.FileRepository, storage port.FileStor
 	}
 }
 
-func (uc *GetFileByIdUseCase) Execute(query GetFileByIdQuery) (*aggregate.FileContent, error) {
-	metadata, repositoryError := uc.repository.GetFile(query.Id)
+func (uc *GetFileByIdUseCase) Execute(ctx context.Context, query GetFileByIdQuery) (*aggregate.FileContent, error) {
+	metadata, repositoryError := uc.repository.GetFile(ctx, query.Id)
 	if repositoryError != nil {
 		return &aggregate.FileContent{}, repositoryError
 	}

@@ -2,6 +2,7 @@ package getfile
 
 import (
 	"bytes"
+	"context"
 	"devconnectstorage/internal/domain"
 	"errors"
 	"io"
@@ -13,11 +14,11 @@ import (
 )
 
 type MockRepositoryPort struct {
-	mock func(id string) (domain.File, error)
+	mock func(ctx context.Context, id string) (domain.File, error)
 }
 
-func (repo *MockRepositoryPort) GetFile(id string) (domain.File, error) {
-	return repo.mock(id)
+func (repo *MockRepositoryPort) GetFile(ctx context.Context, id string) (domain.File, error) {
+	return repo.mock(ctx, id)
 }
 
 type MockStoragePort struct {
@@ -35,7 +36,7 @@ func TestGetFileByIdUseCase_ShouldSuccess(t *testing.T) {
 		},
 	}
 	mockRepository := MockRepositoryPort{
-		mock: func(id string) (domain.File, error) {
+		mock: func(ctx context.Context, id string) (domain.File, error) {
 			return domain.RehydrateFile(
 				id,
 				"owner 1",
@@ -59,7 +60,7 @@ func TestGetFileByIdUseCase_ShouldSuccess(t *testing.T) {
 	query := GetFileByIdQuery{
 		Id: "1",
 	}
-	returnedValue, err := usecase.Execute(query)
+	returnedValue, err := usecase.Execute(context.Background(), query)
 	require.NoError(t, err)
 	assert.Equal(t, returnedValue.Metadata.ID(), "1")
 	assert.NotEmpty(t, returnedValue.Content)
@@ -72,7 +73,7 @@ func TestGetFileByIdUseCase_ShouldReturnErrorWhenRepositoryFails(t *testing.T) {
 		},
 	}
 	mockRepository := MockRepositoryPort{
-		mock: func(id string) (domain.File, error) {
+		mock: func(ctx context.Context, id string) (domain.File, error) {
 			return domain.File{}, errors.New("Some repo error")
 		},
 	}
@@ -85,7 +86,7 @@ func TestGetFileByIdUseCase_ShouldReturnErrorWhenRepositoryFails(t *testing.T) {
 	query := GetFileByIdQuery{
 		Id: "1",
 	}
-	_, err := usecase.Execute(query)
+	_, err := usecase.Execute(context.Background(), query)
 	require.Error(t, err)
 }
 
@@ -96,7 +97,7 @@ func TestGetFileByIdUseCase_ShouldReturnErrorWhenStorageFails(t *testing.T) {
 		},
 	}
 	mockRepository := MockRepositoryPort{
-		mock: func(id string) (domain.File, error) {
+		mock: func(ctx context.Context, id string) (domain.File, error) {
 			return domain.RehydrateFile(
 				id,
 				"owner 1",
@@ -120,6 +121,6 @@ func TestGetFileByIdUseCase_ShouldReturnErrorWhenStorageFails(t *testing.T) {
 	query := GetFileByIdQuery{
 		Id: "1",
 	}
-	_, err := usecase.Execute(query)
+	_, err := usecase.Execute(context.Background(), query)
 	require.Error(t, err)
 }

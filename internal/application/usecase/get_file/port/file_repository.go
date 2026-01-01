@@ -1,7 +1,10 @@
 package port
 
-import "devconnectstorage/internal/domain"
+import (
+	"context"
+	"devconnectstorage/internal/domain"
+)
 
 type FileRepository interface {
-	GetFile(id string) (domain.File, error)
+	GetFile(ctx context.Context, id string) (domain.File, error)
 }
