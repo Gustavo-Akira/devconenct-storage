@@ -22,16 +22,16 @@ func (repo *MockRepositoryPort) GetFile(ctx context.Context, id string) (domain.
 }
 
 type MockStoragePort struct {
-	mock func(storageKey string) (io.ReadCloser, error)
+	mock func(ctx context.Context, storageKey string) (io.ReadCloser, error)
 }
 
-func (storage *MockStoragePort) GetFile(storageKey string) (io.ReadCloser, error) {
-	return storage.mock(storageKey)
+func (storage *MockStoragePort) GetFile(ctx context.Context, storageKey string) (io.ReadCloser, error) {
+	return storage.mock(ctx, storageKey)
 }
 
 func TestGetFileByIdUseCase_ShouldSuccess(t *testing.T) {
 	mockStorage := MockStoragePort{
-		mock: func(storageKey string) (io.ReadCloser, error) {
+		mock: func(ctx context.Context, storageKey string) (io.ReadCloser, error) {
 			return io.NopCloser(bytes.NewReader([]byte("file content"))), nil
 		},
 	}
@@ -68,7 +68,7 @@ func TestGetFileByIdUseCase_ShouldSuccess(t *testing.T) {
 
 func TestGetFileByIdUseCase_ShouldReturnErrorWhenRepositoryFails(t *testing.T) {
 	mockStorage := MockStoragePort{
-		mock: func(storageKey string) (io.ReadCloser, error) {
+		mock: func(ctx context.Context, storageKey string) (io.ReadCloser, error) {
 			return io.NopCloser(bytes.NewReader([]byte("file content"))), nil
 		},
 	}
@@ -92,7 +92,7 @@ func TestGetFileByIdUseCase_ShouldReturnErrorWhenRepositoryFails(t *testing.T) {
 
 func TestGetFileByIdUseCase_ShouldReturnErrorWhenStorageFails(t *testing.T) {
 	mockStorage := MockStoragePort{
-		mock: func(storageKey string) (io.ReadCloser, error) {
+		mock: func(ctx context.Context, storageKey string) (io.ReadCloser, error) {
 			return nil, errors.New("Error on storage")
 		},
 	}

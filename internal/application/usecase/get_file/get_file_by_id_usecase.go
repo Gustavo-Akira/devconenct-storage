@@ -23,7 +23,7 @@ func (uc *GetFileByIdUseCase) Execute(ctx context.Context, query GetFileByIdQuer
 	if repositoryError != nil {
 		return &aggregate.FileContent{}, repositoryError
 	}
-	content, storageError := uc.storage.GetFile(metadata.StorageKey())
+	content, storageError := uc.storage.GetFile(ctx, metadata.StorageKey())
 	if storageError != nil {
 		return &aggregate.FileContent{}, storageError
 	}

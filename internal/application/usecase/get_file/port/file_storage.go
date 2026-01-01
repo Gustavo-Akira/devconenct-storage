@@ -1,7 +1,10 @@
 package port
 
-import "io"
+import (
+	"context"
+	"io"
+)
 
 type FileStorage interface {
-	GetFile(storageKey string) (io.ReadCloser, error)
+	GetFile(ctx context.Context, storageKey string) (io.ReadCloser, error)
 }

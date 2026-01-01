@@ -38,7 +38,7 @@ func NewMinIOStorage(
 	}, nil
 }
 
-func (storage MinIOStorage) SaveFile(ctx context.Context, fileBytes io.Reader, file domain.File) (string, error) {
+func (storage *MinIOStorage) SaveFile(ctx context.Context, fileBytes io.Reader, file domain.File) (string, error) {
 	objectName := buildObjectKey(file)
 	info, err := storage.client.PutObject(ctx, storage.bucket, objectName, fileBytes, file.Size(), minio.PutObjectOptions{})
 	if err != nil {
@@ -47,7 +47,7 @@ func (storage MinIOStorage) SaveFile(ctx context.Context, fileBytes io.Reader, f
 	return info.Key, nil
 }
 
-func (storage MinIOStorage) DeleteFile(ctx context.Context, file domain.File) error {
+func (storage *MinIOStorage) DeleteFile(ctx context.Context, file domain.File) error {
 	if file.StorageKey() == "" {
 		return errors.New("storage key nil on delete")
 	}
@@ -58,6 +58,29 @@ func (storage MinIOStorage) DeleteFile(ctx context.Context, file domain.File) er
 		file.StorageKey(),
 		minio.RemoveObjectOptions{},
 	)
+}
+
+func (storage *MinIOStorage) GetFile(ctx context.Context, storageKey string) (io.ReadCloser, error) {
+
+	if storageKey == "" {
+		return nil, errors.New("storage key cannot be null")
+	}
+
+	obj, err := storage.client.GetObject(
+		ctx,
+		storage.bucket,
+		storageKey,
+		minio.GetObjectOptions{},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = obj.Stat()
+	if err != nil {
+		return nil, err
+	}
+	return obj, nil
 }
 
 func buildObjectKey(file domain.File) string {
