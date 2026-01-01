@@ -1,6 +1,7 @@
 package rest
 
 import (
+	getfile "devconnectstorage/internal/application/usecase/get_file"
 	uploadfile "devconnectstorage/internal/application/usecase/upload_file"
 	"devconnectstorage/internal/infraestructure/inbound/rest/dto"
 
@@ -9,6 +10,7 @@ import (
 
 type FileRestController struct {
 	uploadFile uploadfile.IUploadFileUseCase
+	getFile    getfile.IGetFileByIdUseCase
 }
 
 func NewFileRestController(usecase uploadfile.IUploadFileUseCase) *FileRestController {
@@ -58,4 +60,54 @@ func (controller *FileRestController) UploadFile(ctx *gin.Context) {
 	}
 
 	ctx.JSON(201, result)
+}
+
+func (controller *FileRestController) GetFileContentById(ctx *gin.Context) {
+	id := ctx.Param("id")
+	if id == "" {
+		ctx.JSON(400, gin.H{"error": "id cannot be empty"})
+		return
+	}
+
+	result, err := controller.getFile.Execute(
+		ctx.Request.Context(),
+		getfile.GetFileByIdQuery{Id: id},
+	)
+
+	if err != nil {
+		ctx.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	defer func() { _ = result.Content.Close() }()
+
+	ctx.Header("Content-Disposition", "attachment; filename=\""+result.Metadata.FileName()+"\"")
+
+	ctx.DataFromReader(
+		200,
+		result.Metadata.Size(),
+		result.Metadata.MimeType(),
+		result.Content,
+		nil,
+	)
+
+}
+
+func (controller *FileRestController) GetFileMetadataById(ctx *gin.Context) {
+	id := ctx.Param("id")
+	if id == "" {
+		ctx.JSON(400, gin.H{"error": "id cannot be empty"})
+		return
+	}
+
+	result, err := controller.getFile.Execute(
+		ctx.Request.Context(),
+		getfile.GetFileByIdQuery{Id: id},
+	)
+	if err != nil {
+		ctx.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	defer func() { _ = result.Content.Close() }()
+	ctx.JSON(200, result.Metadata)
 }
