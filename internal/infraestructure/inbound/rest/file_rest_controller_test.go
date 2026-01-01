@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"devconnectstorage/internal/application/aggregate"
+	getfile "devconnectstorage/internal/application/usecase/get_file"
 	uploadfile "devconnectstorage/internal/application/usecase/upload_file"
 	"devconnectstorage/internal/domain"
 
@@ -19,6 +22,15 @@ import (
 
 type UploadFileUseCaseMock struct {
 	mock.Mock
+}
+
+type GetFileUseCaseMock struct {
+	mock.Mock
+}
+
+func (m *GetFileUseCaseMock) Execute(ctx context.Context, query getfile.GetFileByIdQuery) (*aggregate.FileContent, error) {
+	args := m.Called(ctx, query)
+	return args.Get(0).(*aggregate.FileContent), args.Error(1)
 }
 
 func (m *UploadFileUseCaseMock) Execute(
@@ -223,6 +235,151 @@ func TestUploadFile_ShouldReturn500_WhenUseCaseFails(t *testing.T) {
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 
+	assert.Equal(t, http.StatusInternalServerError, resp.Code)
+	useCaseMock.AssertExpectations(t)
+}
+
+func TestGetFileContentById_ShouldReturn200_WhenFileExists(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	content := bytes.NewBufferString("file content")
+	file, _ := domain.NewFile(
+		"123",
+		"owner-1",
+		nil,
+		"test.txt",
+		"text/plain",
+		int64(content.Len()),
+		domain.VisibilityPublic,
+	)
+
+	useCaseMock := new(GetFileUseCaseMock)
+	controller := &FileRestController{
+		getFile: useCaseMock,
+	}
+
+	router := gin.New()
+	router.GET("/files/:id/content", controller.GetFileContentById)
+
+	useCaseMock.On("Execute", mock.Anything, getfile.GetFileByIdQuery{Id: "123"}).
+		Return(&aggregate.FileContent{Metadata: file, Content: io.NopCloser(content)}, nil).Once()
+
+	req := httptest.NewRequest(http.MethodGet, "/files/123/content", nil)
+	resp := httptest.NewRecorder()
+
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Equal(t, "attachment; filename=\"test.txt\"", resp.Header().Get("Content-Disposition"))
+	assert.Equal(t, "text/plain", resp.Header().Get("Content-Type"))
+	assert.Equal(t, "file content", resp.Body.String())
+
+	useCaseMock.AssertExpectations(t)
+}
+
+func TestGetFileContentById_ShouldReturn400_WhenIdMissing(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	controller := &FileRestController{}
+	router := gin.New()
+	router.GET("/files/:id/content", controller.GetFileContentById)
+
+	req := httptest.NewRequest(http.MethodGet, "/files//content", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+}
+
+func TestGetFileContentById_ShouldReturn500_WhenUseCaseFails(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	useCaseMock := new(GetFileUseCaseMock)
+	controller := &FileRestController{
+		getFile: useCaseMock,
+	}
+
+	router := gin.New()
+	router.GET("/files/:id/content", controller.GetFileContentById)
+
+	useCaseMock.On("Execute", mock.Anything, mock.Anything).
+		Return(&aggregate.FileContent{}, errors.New("use case error")).Once()
+
+	req := httptest.NewRequest(http.MethodGet, "/files/123/content", nil)
+	resp := httptest.NewRecorder()
+
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusInternalServerError, resp.Code)
+	useCaseMock.AssertExpectations(t)
+}
+
+func TestGetFileMetadataById_ShouldReturn200_WhenFileExists(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	content := bytes.NewBufferString("file content")
+	file, _ := domain.NewFile(
+		"123",
+		"owner-1",
+		nil,
+		"test.txt",
+		"text/plain",
+		int64(content.Len()),
+		domain.VisibilityPublic,
+	)
+
+	useCaseMock := new(GetFileUseCaseMock)
+	controller := &FileRestController{
+		getFile: useCaseMock,
+	}
+
+	router := gin.New()
+	router.GET("/files/:id/metadata", controller.GetFileMetadataById)
+
+	useCaseMock.On("Execute", mock.Anything, getfile.GetFileByIdQuery{Id: "123"}).
+		Return(&aggregate.FileContent{Metadata: file, Content: io.NopCloser(content)}, nil).Once()
+
+	req := httptest.NewRequest(http.MethodGet, "/files/123/metadata", nil)
+	resp := httptest.NewRecorder()
+
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	useCaseMock.AssertExpectations(t)
+}
+
+func TestGetFileMetadataById_ShouldReturn400_WhenIdMissing(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	controller := &FileRestController{}
+	router := gin.New()
+	router.GET("/files/:id/metadata", controller.GetFileMetadataById)
+
+	req := httptest.NewRequest(http.MethodGet, "/files//metadata", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+}
+
+func TestGetFileMetadataById_ShouldReturn500_WhenUseCaseFails(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	useCaseMock := new(GetFileUseCaseMock)
+	controller := &FileRestController{
+		getFile: useCaseMock,
+	}
+
+	router := gin.New()
+	router.GET("/files/:id/metadata", controller.GetFileMetadataById)
+
+	useCaseMock.On("Execute", mock.Anything, mock.Anything).
+		Return(&aggregate.FileContent{}, errors.New("use case error")).Once()
+
+	req := httptest.NewRequest(http.MethodGet, "/files/123/metadata", nil)
+	resp := httptest.NewRecorder()
+
+	router.ServeHTTP(resp, req)
 	assert.Equal(t, http.StatusInternalServerError, resp.Code)
 	useCaseMock.AssertExpectations(t)
 }
