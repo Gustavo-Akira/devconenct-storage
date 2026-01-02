@@ -1,6 +1,7 @@
 package rest
 
 import (
+	deletefile "devconnectstorage/internal/application/usecase/delete_file"
 	getfile "devconnectstorage/internal/application/usecase/get_file"
 	uploadfile "devconnectstorage/internal/application/usecase/upload_file"
 	"devconnectstorage/internal/infraestructure/inbound/rest/dto"
@@ -11,6 +12,7 @@ import (
 type FileRestController struct {
 	uploadFile uploadfile.IUploadFileUseCase
 	getFile    getfile.IGetFileByIdUseCase
+	deleteFile deletefile.IDeleteFileUseCase
 }
 
 func NewFileRestController(usecase uploadfile.IUploadFileUseCase, getFileUsecase getfile.IGetFileByIdUseCase) *FileRestController {
@@ -111,4 +113,21 @@ func (controller *FileRestController) GetFileMetadataById(ctx *gin.Context) {
 	}
 	defer func() { _ = result.Content.Close() }()
 	ctx.JSON(200, dto.NewFileMetadataResponse(result.Metadata))
+}
+
+func (controller *FileRestController) DeleteFile(ctx *gin.Context) {
+	id := ctx.Param("id")
+	if id == "" {
+		ctx.JSON(400, gin.H{"error": "id cannot be empty"})
+		return
+	}
+	command := deletefile.DeleteFileCommand{
+		Id: id,
+	}
+	err := controller.deleteFile.Execute(ctx.Request.Context(), command)
+	if err != nil {
+		ctx.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(204, gin.H{})
 }

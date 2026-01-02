@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"devconnectstorage/internal/application/aggregate"
+	deletefile "devconnectstorage/internal/application/usecase/delete_file"
 	getfile "devconnectstorage/internal/application/usecase/get_file"
 	uploadfile "devconnectstorage/internal/application/usecase/upload_file"
 	"devconnectstorage/internal/domain"
@@ -28,6 +29,10 @@ type GetFileUseCaseMock struct {
 	mock.Mock
 }
 
+type DeleteFileUseCaseMock struct {
+	mock.Mock
+}
+
 func (m *GetFileUseCaseMock) Execute(ctx context.Context, query getfile.GetFileByIdQuery) (*aggregate.FileContent, error) {
 	args := m.Called(ctx, query)
 	return args.Get(0).(*aggregate.FileContent), args.Error(1)
@@ -40,6 +45,11 @@ func (m *UploadFileUseCaseMock) Execute(
 	args := m.Called(ctx, cmd)
 
 	return args.Get(0).(domain.File), args.Error(1)
+}
+
+func (m *DeleteFileUseCaseMock) Execute(ctx context.Context, command deletefile.DeleteFileCommand) error {
+	args := m.Called(ctx, command)
+	return args.Error(0)
 }
 
 func TestUploadFile_ShouldReturn201_WhenRequestIsValid(t *testing.T) {
@@ -383,5 +393,68 @@ func TestGetFileMetadataById_ShouldReturn500_WhenUseCaseFails(t *testing.T) {
 
 	router.ServeHTTP(resp, req)
 	assert.Equal(t, http.StatusInternalServerError, resp.Code)
+	useCaseMock.AssertExpectations(t)
+}
+
+func TestDeleteFile_ShouldReturn204WhenSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	useCaseMock := new(DeleteFileUseCaseMock)
+	controller := &FileRestController{
+		deleteFile: useCaseMock,
+	}
+
+	router := gin.New()
+	router.DELETE("/files/:id", controller.DeleteFile)
+
+	useCaseMock.On("Execute", mock.Anything, mock.Anything).
+		Return(nil).Once()
+
+	req := httptest.NewRequest(http.MethodDelete, "/files/123", nil)
+	resp := httptest.NewRecorder()
+
+	router.ServeHTTP(resp, req)
+	assert.Equal(t, http.StatusNoContent, resp.Code)
+	useCaseMock.AssertExpectations(t)
+}
+
+func TestDeleteFile_ShouldReturn500WhenFail(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	useCaseMock := new(DeleteFileUseCaseMock)
+	controller := &FileRestController{
+		deleteFile: useCaseMock,
+	}
+
+	router := gin.New()
+	router.DELETE("/files/:id", controller.DeleteFile)
+
+	useCaseMock.On("Execute", mock.Anything, mock.Anything).
+		Return(errors.New("Error on delete")).Once()
+
+	req := httptest.NewRequest(http.MethodDelete, "/files/123", nil)
+	resp := httptest.NewRecorder()
+
+	router.ServeHTTP(resp, req)
+	assert.Equal(t, http.StatusInternalServerError, resp.Code)
+	useCaseMock.AssertExpectations(t)
+}
+
+func TestDeleteFile_ShouldReturn400WhenIdMissing(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	useCaseMock := new(DeleteFileUseCaseMock)
+	controller := &FileRestController{
+		deleteFile: useCaseMock,
+	}
+
+	router := gin.New()
+	router.DELETE("/files/:id/delete", controller.DeleteFile)
+
+	req := httptest.NewRequest(http.MethodDelete, "/files//delete", nil)
+	resp := httptest.NewRecorder()
+
+	router.ServeHTTP(resp, req)
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
 	useCaseMock.AssertExpectations(t)
 }
