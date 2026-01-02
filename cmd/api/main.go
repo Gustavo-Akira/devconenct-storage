@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	deletefile "devconnectstorage/internal/application/usecase/delete_file"
 	getfile "devconnectstorage/internal/application/usecase/get_file"
 	uploadfile "devconnectstorage/internal/application/usecase/upload_file"
 	"devconnectstorage/internal/infraestructure/inbound/rest"
@@ -42,12 +43,15 @@ func main() {
 
 	getFileUseCase := getfile.NewGetFileByIdUseCase(fileRepo, storage)
 
-	fileController := rest.NewFileRestController(uploadFileUseCase, getFileUseCase)
+	deleteFileUseCase := deletefile.NewDeleteFileUseCase(fileRepo, storage)
+
+	fileController := rest.NewFileRestController(uploadFileUseCase, getFileUseCase, deleteFileUseCase)
 
 	router := gin.Default()
 	router.POST("/files", fileController.UploadFile)
 	router.GET("/files/:id", fileController.GetFileMetadataById)
 	router.GET("/files/:id/content", fileController.GetFileContentById)
+	router.DELETE("/files/:id", fileController.DeleteFile)
 
 	port := os.Getenv("PORT")
 	if port == "" {
