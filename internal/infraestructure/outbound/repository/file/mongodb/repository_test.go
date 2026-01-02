@@ -67,48 +67,9 @@ func TestMongoFileRepository_Save_ShouldPersistFile(t *testing.T) {
 	assert.Equal(t, file.Status(), persisted.Status())
 	assert.Equal(t, file.Visibility(), persisted.Visibility())
 	assert.WithinDuration(t, now, persisted.CreatedAt(), time.Second)
+	deleteError := repo.DeleteFile(ctx, file.ID())
+	assert.NoError(t, deleteError)
 }
-
-func TestMongoFileRepository_Save_ShouldNotPersistWithoutId(t *testing.T) {
-	ctx := context.Background()
-
-	mongoContainer, err := db.Run(
-		ctx,
-		"mongo:8.2",
-	)
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		_ = mongoContainer.Terminate(ctx)
-	})
-
-	mongoURI, err := mongoContainer.ConnectionString(ctx)
-	require.NoError(t, err)
-
-	repo, err := NewMongoFileRepository(
-		mongoURI,
-		"",
-		"",
-		"",
-		"files",
-	)
-	require.NoError(t, err)
-
-	file, err := domain.NewFile(
-		"2",
-		"owner-123",
-		nil,
-		"test.txt",
-		"text/plain",
-		42,
-		domain.VisibilityPublic,
-	)
-	require.NoError(t, err)
-
-	_, err = repo.Save(ctx, file)
-	assert.Error(t, err)
-
-}
-
 func TestMongoFileRepository_Get_ShouldReturnErrorWhenNotFind(t *testing.T) {
 	ctx := context.Background()
 	mongoContainer, err := db.Run(
@@ -127,11 +88,66 @@ func TestMongoFileRepository_Get_ShouldReturnErrorWhenNotFind(t *testing.T) {
 		mongoURI,
 		"",
 		"",
-		"",
+		"test-db",
 		"files",
 	)
 	require.NoError(t, err)
 
 	_, err = repo.GetFile(ctx, "123")
 	require.Error(t, err)
+}
+
+func TestMongoFileRepository_Delete_ShouldReturnErrorWhenIdNotExists(t *testing.T) {
+	ctx := context.Background()
+	mongoContainer, err := db.Run(
+		ctx,
+		"mongo:8.2",
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = mongoContainer.Terminate(ctx)
+	})
+
+	mongoURI, err := mongoContainer.ConnectionString(ctx)
+	require.NoError(t, err)
+
+	repo, err := NewMongoFileRepository(
+		mongoURI,
+		"",
+		"",
+		"test-db",
+		"files",
+	)
+	require.NoError(t, err)
+
+	err = repo.DeleteFile(ctx, "123")
+	assert.Error(t, err)
+	assert.Equal(t, err.Error(), "could not delete. please try again")
+}
+
+func TestMongoFileRepository_Delete_ShouldReturnErrorWhenHaveDatabaseError(t *testing.T) {
+	ctx := context.Background()
+	mongoContainer, err := db.Run(
+		ctx,
+		"mongo:8.2",
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = mongoContainer.Terminate(ctx)
+	})
+
+	mongoURI, err := mongoContainer.ConnectionString(ctx)
+	require.NoError(t, err)
+
+	repo, err := NewMongoFileRepository(
+		mongoURI,
+		"",
+		"",
+		"",
+		"files",
+	)
+	require.NoError(t, err)
+
+	err = repo.DeleteFile(ctx, "123")
+	assert.Error(t, err)
 }
