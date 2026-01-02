@@ -66,3 +66,15 @@ func (repo MongoFileRepository) GetFile(ctx context.Context, id string) (domain.
 	}
 	return metadata, nil
 }
+
+func (repo *MongoFileRepository) DeleteFile(ctx context.Context, id string) error {
+	filter := bson.M{"_id": id}
+	result, err := repo.client.Database(repo.database).Collection(repo.collection).DeleteOne(ctx, filter)
+	if err != nil {
+		return err
+	}
+	if result.DeletedCount <= 0 {
+		return errors.New("could not delete. please try again")
+	}
+	return nil
+}
