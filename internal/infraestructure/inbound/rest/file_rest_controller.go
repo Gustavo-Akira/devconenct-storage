@@ -13,9 +13,10 @@ type FileRestController struct {
 	getFile    getfile.IGetFileByIdUseCase
 }
 
-func NewFileRestController(usecase uploadfile.IUploadFileUseCase) *FileRestController {
+func NewFileRestController(usecase uploadfile.IUploadFileUseCase, getFileUsecase getfile.IGetFileByIdUseCase) *FileRestController {
 	return &FileRestController{
 		uploadFile: usecase,
+		getFile:    getFileUsecase,
 	}
 }
 

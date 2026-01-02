@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	getfile "devconnectstorage/internal/application/usecase/get_file"
 	uploadfile "devconnectstorage/internal/application/usecase/upload_file"
 	"devconnectstorage/internal/infraestructure/inbound/rest"
 	"devconnectstorage/internal/infraestructure/outbound/generator/uuidgen"
@@ -39,10 +40,14 @@ func main() {
 
 	uploadFileUseCase := uploadfile.NewUploadFileUseCase(fileRepo, storage, idGenerator)
 
-	fileController := rest.NewFileRestController(uploadFileUseCase)
+	getFileUseCase := getfile.NewGetFileByIdUseCase(fileRepo, storage)
+
+	fileController := rest.NewFileRestController(uploadFileUseCase, getFileUseCase)
 
 	router := gin.Default()
 	router.POST("/files", fileController.UploadFile)
+	router.GET("/files/:id", fileController.GetFileMetadataById)
+	router.GET("/files/:id/content", fileController.GetFileContentById)
 
 	port := os.Getenv("PORT")
 	if port == "" {
