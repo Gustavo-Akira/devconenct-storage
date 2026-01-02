@@ -15,10 +15,11 @@ type FileRestController struct {
 	deleteFile deletefile.IDeleteFileUseCase
 }
 
-func NewFileRestController(usecase uploadfile.IUploadFileUseCase, getFileUsecase getfile.IGetFileByIdUseCase) *FileRestController {
+func NewFileRestController(usecase uploadfile.IUploadFileUseCase, getFileUsecase getfile.IGetFileByIdUseCase, deleteFileUseCase deletefile.IDeleteFileUseCase) *FileRestController {
 	return &FileRestController{
 		uploadFile: usecase,
 		getFile:    getFileUsecase,
+		deleteFile: deleteFileUseCase,
 	}
 }
 

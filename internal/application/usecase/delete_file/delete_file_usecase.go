@@ -10,6 +10,13 @@ type DeleteFileUseCase struct {
 	storage    port.Storage
 }
 
+func NewDeleteFileUseCase(repo port.Repository, storage port.Storage) *DeleteFileUseCase {
+	return &DeleteFileUseCase{
+		repository: repo,
+		storage:    storage,
+	}
+}
+
 func (uc *DeleteFileUseCase) Execute(ctx context.Context, command DeleteFileCommand) error {
 	existentFile, err := uc.repository.GetFile(ctx, command.Id)
 	if err != nil {
