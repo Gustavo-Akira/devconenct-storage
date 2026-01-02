@@ -60,7 +60,7 @@ func (controller *FileRestController) UploadFile(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(201, result)
+	ctx.JSON(201, dto.NewFileMetadataResponse(result))
 }
 
 func (controller *FileRestController) GetFileContentById(ctx *gin.Context) {
@@ -110,5 +110,5 @@ func (controller *FileRestController) GetFileMetadataById(ctx *gin.Context) {
 		return
 	}
 	defer func() { _ = result.Content.Close() }()
-	ctx.JSON(200, result.Metadata)
+	ctx.JSON(200, dto.NewFileMetadataResponse(result.Metadata))
 }

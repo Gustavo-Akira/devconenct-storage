@@ -345,6 +345,8 @@ func TestGetFileMetadataById_ShouldReturn200_WhenFileExists(t *testing.T) {
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), file.ID())
+	assert.NotContains(t, resp.Body.String(), "storage_key")
 	useCaseMock.AssertExpectations(t)
 }
 
