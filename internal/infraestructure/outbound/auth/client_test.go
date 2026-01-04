@@ -19,7 +19,7 @@ func TestAuthClient_GetProfile_Success(t *testing.T) {
 		assert.Equal(t, "valid-token", cookie.Value)
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"id": 123}`))
+		_, _ = w.Write([]byte(`{"id": 123}`))
 	}))
 	defer server.Close()
 
@@ -56,7 +56,7 @@ func TestAuthClient_GetProfile_InvalidJSON(t *testing.T) {
 	// arrange
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`invalid-json`))
+		_, _ = w.Write([]byte(`invalid-json`))
 	}))
 	defer server.Close()
 
