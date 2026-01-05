@@ -16,6 +16,8 @@ type FileRestController struct {
 	deleteFile deletefile.IDeleteFileUseCase
 }
 
+const tokenContextKeyValue tokenContextKey = "Token"
+
 func NewFileRestController(usecase uploadfile.IUploadFileUseCase, getFileUsecase getfile.IGetFileByIdUseCase, deleteFileUseCase deletefile.IDeleteFileUseCase) *FileRestController {
 	return &FileRestController{
 		uploadFile: usecase,
@@ -33,7 +35,7 @@ func (controller *FileRestController) UploadFile(ctx *gin.Context) {
 	}
 	ctxWithToken := context.WithValue(
 		ctx.Request.Context(),
-		"Token",
+		tokenContextKeyValue,
 		jwt,
 	)
 	if err := ctx.ShouldBind(&fileBody); err != nil {
