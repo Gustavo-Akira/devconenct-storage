@@ -6,7 +6,6 @@ import (
 )
 
 type UploadFileRequest struct {
-	OwnerID    string  `form:"owner_id" binding:"required"`
 	ProjectID  *string `form:"project_id"`
 	FileName   string  `form:"file_name" binding:"required"`
 	MimeType   string  `form:"mime_type" binding:"required"`
@@ -15,7 +14,6 @@ type UploadFileRequest struct {
 
 func (req UploadFileRequest) ToCommand(content io.Reader, size int64) uploadfile.UploadFileCommand {
 	return uploadfile.UploadFileCommand{
-		OwnerID:    req.OwnerID,
 		ProjectID:  req.ProjectID,
 		FileName:   req.FileName,
 		MimeType:   req.MimeType,

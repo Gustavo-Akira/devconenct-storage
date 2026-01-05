@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"context"
 	deletefile "devconnectstorage/internal/application/usecase/delete_file"
 	getfile "devconnectstorage/internal/application/usecase/get_file"
 	uploadfile "devconnectstorage/internal/application/usecase/upload_file"
@@ -25,7 +26,16 @@ func NewFileRestController(usecase uploadfile.IUploadFileUseCase, getFileUsecase
 
 func (controller *FileRestController) UploadFile(ctx *gin.Context) {
 	var fileBody dto.UploadFileRequest
-
+	jwt, err := ctx.Cookie("jwt")
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": err.Error()})
+		return
+	}
+	ctxWithToken := context.WithValue(
+		ctx.Request.Context(),
+		"Token",
+		jwt,
+	)
 	if err := ctx.ShouldBind(&fileBody); err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
@@ -56,7 +66,7 @@ func (controller *FileRestController) UploadFile(ctx *gin.Context) {
 
 	command := fileBody.ToCommand(file, fileHeader.Size)
 
-	result, err := controller.uploadFile.Execute(ctx.Request.Context(), command)
+	result, err := controller.uploadFile.Execute(ctxWithToken, command)
 	if err != nil {
 		//govulncheck:ignore GO-2025-4233 reason: false positive via gin error handling; HTTP/3 not used
 		ctx.JSON(500, gin.H{"error": err.Error()})

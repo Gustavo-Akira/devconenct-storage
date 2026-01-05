@@ -13,7 +13,8 @@ services:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
-
+    networks:
+      - dev-connect
   minio:
     image: minio/minio:latest
     container_name: devconnect-minio
@@ -27,7 +28,8 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - minio-data:/data
-
+    networks:
+      - dev-connect
   api:
     build:
       context: .
@@ -46,9 +48,16 @@ services:
       MINIO_PASSWORD: "minioadmin"
       MINIO_BUCKET: "test-bucket"
       MINIO_USE_SSL: "false"
+      AUTH_URI: http://devconnect:8080
     ports:
       - "8083:8083"
-
+    networks:
+      - dev-connect
 volumes:
   mongo-data:
   minio-data:
+
+
+networks:
+  dev-connect:
+    external: true

@@ -4,25 +4,42 @@ import (
 	"context"
 	"devconnectstorage/internal/application/usecase/upload_file/port"
 	"devconnectstorage/internal/domain"
+	"devconnectstorage/internal/infraestructure/outbound/auth"
+	"errors"
+	"strconv"
 )
 
 type UploadFileUseCase struct {
 	fileRepository port.FileRepository
 	storage        port.Storage
 	generator      port.IdGenerator
+	authClient     auth.IAuthClient
 }
 
-func NewUploadFileUseCase(repo port.FileRepository, storage port.Storage, generator port.IdGenerator) *UploadFileUseCase {
+func NewUploadFileUseCase(repo port.FileRepository, storage port.Storage, generator port.IdGenerator, authClient auth.IAuthClient) *UploadFileUseCase {
 	return &UploadFileUseCase{
 		fileRepository: repo,
 		storage:        storage,
 		generator:      generator,
+		authClient:     authClient,
 	}
 }
 
 func (uc UploadFileUseCase) Execute(ctx context.Context, saveCommand UploadFileCommand) (domain.File, error) {
 
-	file, domainErr := domain.NewFile(uc.generator.Generate(), saveCommand.OwnerID, saveCommand.ProjectID, saveCommand.FileName, saveCommand.MimeType, saveCommand.Size, domain.Visibility(saveCommand.Visibility))
+	token := ctx.Value("Token")
+
+	if token == nil {
+		return domain.File{}, errors.New("token cannot be null")
+	}
+
+	profileId, authError := uc.authClient.GetProfile(token.(string))
+
+	if authError != nil {
+		return domain.File{}, authError
+	}
+
+	file, domainErr := domain.NewFile(uc.generator.Generate(), strconv.FormatInt(*profileId, 10), saveCommand.ProjectID, saveCommand.FileName, saveCommand.MimeType, saveCommand.Size, domain.Visibility(saveCommand.Visibility))
 	if domainErr != nil {
 		return domain.File{}, domainErr
 	}
