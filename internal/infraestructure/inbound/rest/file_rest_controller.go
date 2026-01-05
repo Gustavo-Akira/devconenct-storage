@@ -16,6 +16,8 @@ type FileRestController struct {
 	deleteFile deletefile.IDeleteFileUseCase
 }
 
+type tokenContextKey string
+
 const tokenContextKeyValue tokenContextKey = "Token"
 
 func NewFileRestController(usecase uploadfile.IUploadFileUseCase, getFileUsecase getfile.IGetFileByIdUseCase, deleteFileUseCase deletefile.IDeleteFileUseCase) *FileRestController {
