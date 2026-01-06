@@ -4,6 +4,9 @@ import (
 	"context"
 	"devconnectstorage/internal/application/aggregate"
 	"devconnectstorage/internal/application/usecase/get_file/port"
+	"devconnectstorage/internal/domain"
+	"devconnectstorage/internal/infraestructure/outbound/auth"
+	"errors"
 )
 
 type GetFileByIdUseCase struct {
@@ -19,10 +22,20 @@ func NewGetFileByIdUseCase(repository port.FileRepository, storage port.FileStor
 }
 
 func (uc *GetFileByIdUseCase) Execute(ctx context.Context, query GetFileByIdQuery) (*aggregate.FileContent, error) {
+	token := ctx.Value(auth.AuthTokenKey)
+
+	if token == nil {
+		return &aggregate.FileContent{}, errors.New("token cannot be null")
+	}
+
 	metadata, repositoryError := uc.repository.GetFile(ctx, query.Id)
 	if repositoryError != nil {
 		return &aggregate.FileContent{}, repositoryError
 	}
+	if metadata.Visibility() == domain.VisibilityPrivate && metadata.OwnerID() != token.(string) {
+		return &aggregate.FileContent{}, errors.New("unauthorized")
+	}
+
 	content, storageError := uc.storage.GetFile(ctx, metadata.StorageKey())
 	if storageError != nil {
 		return &aggregate.FileContent{}, storageError

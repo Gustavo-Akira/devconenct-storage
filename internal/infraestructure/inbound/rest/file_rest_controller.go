@@ -84,8 +84,19 @@ func (controller *FileRestController) GetFileContentById(ctx *gin.Context) {
 		return
 	}
 
-	result, err := controller.getFile.Execute(
+	jwt, err := ctx.Cookie("jwt")
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": err.Error()})
+		return
+	}
+	ctxWithToken := context.WithValue(
 		ctx.Request.Context(),
+		auth.AuthTokenKey,
+		jwt,
+	)
+
+	result, err := controller.getFile.Execute(
+		ctxWithToken,
 		getfile.GetFileByIdQuery{Id: id},
 	)
 
@@ -115,8 +126,19 @@ func (controller *FileRestController) GetFileMetadataById(ctx *gin.Context) {
 		return
 	}
 
-	result, err := controller.getFile.Execute(
+	jwt, err := ctx.Cookie("jwt")
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": err.Error()})
+		return
+	}
+	ctxWithToken := context.WithValue(
 		ctx.Request.Context(),
+		auth.AuthTokenKey,
+		jwt,
+	)
+
+	result, err := controller.getFile.Execute(
+		ctxWithToken,
 		getfile.GetFileByIdQuery{Id: id},
 	)
 	if err != nil {
