@@ -10,6 +10,10 @@ type IAuthClient interface {
 	GetProfile(token string) (*int64, error)
 }
 
+type AuthTokenKeyType struct{}
+
+var AuthTokenKey = AuthTokenKeyType{}
+
 type AuthClient struct {
 	baseURL    string
 	httpClient *http.Client

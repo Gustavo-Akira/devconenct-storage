@@ -6,6 +6,7 @@ import (
 	getfile "devconnectstorage/internal/application/usecase/get_file"
 	uploadfile "devconnectstorage/internal/application/usecase/upload_file"
 	"devconnectstorage/internal/infraestructure/inbound/rest/dto"
+	"devconnectstorage/internal/infraestructure/outbound/auth"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,10 +16,6 @@ type FileRestController struct {
 	getFile    getfile.IGetFileByIdUseCase
 	deleteFile deletefile.IDeleteFileUseCase
 }
-
-type tokenContextKey string
-
-const tokenContextKeyValue tokenContextKey = "Token"
 
 func NewFileRestController(usecase uploadfile.IUploadFileUseCase, getFileUsecase getfile.IGetFileByIdUseCase, deleteFileUseCase deletefile.IDeleteFileUseCase) *FileRestController {
 	return &FileRestController{
@@ -37,7 +34,7 @@ func (controller *FileRestController) UploadFile(ctx *gin.Context) {
 	}
 	ctxWithToken := context.WithValue(
 		ctx.Request.Context(),
-		tokenContextKeyValue,
+		auth.AuthTokenKey,
 		jwt,
 	)
 	if err := ctx.ShouldBind(&fileBody); err != nil {

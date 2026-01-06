@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"devconnectstorage/internal/domain"
+	"devconnectstorage/internal/infraestructure/outbound/auth"
 	"errors"
 	"io"
 	"testing"
@@ -46,12 +47,8 @@ func (m *AuthClientMock) GetProfile(token string) (*int64, error) {
 	return m.GetProfileFn(token)
 }
 
-type tokenContextKey string
-
-const tokenContextKeyValue tokenContextKey = "Token"
-
 func TestUploadFileUseCase_Success(t *testing.T) {
-	ctx := context.WithValue(context.Background(), tokenContextKeyValue, "sffa")
+	ctx := context.WithValue(context.Background(), auth.AuthTokenKey, "sffa")
 	repoCalled := false
 	storageCalled := false
 	deleteStorageCalled := false
@@ -109,7 +106,7 @@ func TestUploadFileUseCase_Execute_ErrorOnRepositorySave(t *testing.T) {
 	repoCalled := false
 	storageCalled := false
 	deleteStorageCalled := false
-	ctx := context.WithValue(context.Background(), tokenContextKeyValue, "sffa")
+	ctx := context.WithValue(context.Background(), auth.AuthTokenKey, "sffa")
 
 	repo := &FileRepositoryMock{
 		SaveFn: func(ctx context.Context, file domain.File) (domain.File, error) {
@@ -162,7 +159,7 @@ func TestUploadFileUseCase_Execute_ErrorOnCreateFileDomain(t *testing.T) {
 	repoCalled := false
 	storageCalled := false
 	deleteStorageCalled := false
-	ctx := context.WithValue(context.Background(), tokenContextKeyValue, "sffa")
+	ctx := context.WithValue(context.Background(), auth.AuthTokenKey, "sffa")
 
 	repo := &FileRepositoryMock{
 		SaveFn: func(ctx context.Context, file domain.File) (domain.File, error) {
@@ -215,7 +212,7 @@ func TestUploadFileUseCase_Execute_ErrorOnMarkAvailableDomain(t *testing.T) {
 	repoCalled := false
 	storageCalled := false
 	deleteStorageCalled := false
-	ctx := context.WithValue(context.Background(), tokenContextKeyValue, "sffa")
+	ctx := context.WithValue(context.Background(), auth.AuthTokenKey, "sffa")
 
 	repo := &FileRepositoryMock{
 		SaveFn: func(ctx context.Context, file domain.File) (domain.File, error) {
@@ -268,7 +265,7 @@ func TestUploadFileUseCase_Execute_ErrorOnStorageSave(t *testing.T) {
 	repoCalled := false
 	storageCalled := false
 	deleteStorageCalled := false
-	ctx := context.WithValue(context.Background(), tokenContextKeyValue, "sffa")
+	ctx := context.WithValue(context.Background(), auth.AuthTokenKey, "sffa")
 
 	repo := &FileRepositoryMock{
 		SaveFn: func(ctx context.Context, file domain.File) (domain.File, error) {

@@ -27,7 +27,7 @@ func NewUploadFileUseCase(repo port.FileRepository, storage port.Storage, genera
 
 func (uc UploadFileUseCase) Execute(ctx context.Context, saveCommand UploadFileCommand) (domain.File, error) {
 
-	token := ctx.Value("Token")
+	token := ctx.Value(auth.AuthTokenKey)
 
 	if token == nil {
 		return domain.File{}, errors.New("token cannot be null")
