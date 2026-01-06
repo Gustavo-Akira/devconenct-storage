@@ -66,7 +66,6 @@ func TestUploadFile_ShouldReturn201_WhenRequestIsValid(t *testing.T) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	_ = writer.WriteField("owner_id", "owner-123")
 	_ = writer.WriteField("visibility", "public")
 	_ = writer.WriteField("project_id", "123")
 	_ = writer.WriteField("mime_type", "plain/text")
@@ -83,6 +82,7 @@ func TestUploadFile_ShouldReturn201_WhenRequestIsValid(t *testing.T) {
 		body,
 	)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.AddCookie(&http.Cookie{Name: "jwt", Value: "faafdafs"})
 	expectedFile, _ := domain.NewFile(
 		"123",
 		"owner-123",
@@ -120,7 +120,6 @@ func TestUploadFile_ShouldReturn400_WhenFileIsMissing(t *testing.T) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	_ = writer.WriteField("owner_id", "owner-123")
 	_ = writer.WriteField("visibility", "public")
 	_ = writer.WriteField("project_id", "123")
 	_ = writer.WriteField("mime_type", "plain/text")
@@ -133,7 +132,7 @@ func TestUploadFile_ShouldReturn400_WhenFileIsMissing(t *testing.T) {
 		body,
 	)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-
+	req.AddCookie(&http.Cookie{Name: "jwt", Value: "faafdafs"})
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 
@@ -155,7 +154,6 @@ func TestUploadFile_ShouldReturn400_WhenRequiredMetadataIsMissing(t *testing.T) 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	_ = writer.WriteField("ownerid", "owner-123")
 	_ = writer.WriteField("visibility", "public")
 	_ = writer.WriteField("project_id", "123")
 	_ = writer.WriteField("mime_type", "plain/text")
@@ -168,7 +166,7 @@ func TestUploadFile_ShouldReturn400_WhenRequiredMetadataIsMissing(t *testing.T) 
 		body,
 	)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-
+	req.AddCookie(&http.Cookie{Name: "jwt", Value: "faafdafs"})
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 
@@ -188,7 +186,6 @@ func TestUploadFile_ShouldReturn400_WhenFileSizeIsZero(t *testing.T) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	_ = writer.WriteField("owner_id", "owner-123")
 	_ = writer.WriteField("visibility", "public")
 	_ = writer.WriteField("mime_type", "text/plain")
 	_ = writer.WriteField("file_name", "empty.txt")
@@ -199,7 +196,7 @@ func TestUploadFile_ShouldReturn400_WhenFileSizeIsZero(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/files", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-
+	req.AddCookie(&http.Cookie{Name: "jwt", Value: "faafdafs"})
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 
@@ -220,7 +217,6 @@ func TestUploadFile_ShouldReturn500_WhenUseCaseFails(t *testing.T) {
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	_ = writer.WriteField("owner_id", "owner-123")
 	_ = writer.WriteField("visibility", "public")
 	_ = writer.WriteField("project_id", "123")
 	_ = writer.WriteField("mime_type", "plain/text")
@@ -236,7 +232,7 @@ func TestUploadFile_ShouldReturn500_WhenUseCaseFails(t *testing.T) {
 		body,
 	)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-
+	req.AddCookie(&http.Cookie{Name: "jwt", Value: "faafdafs"})
 	useCaseMock.
 		On("Execute", mock.Anything, mock.Anything).
 		Return(domain.File{}, errors.New("use case error")).
@@ -275,6 +271,7 @@ func TestGetFileContentById_ShouldReturn200_WhenFileExists(t *testing.T) {
 		Return(&aggregate.FileContent{Metadata: file, Content: io.NopCloser(content)}, nil).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/files/123/content", nil)
+	req.AddCookie(&http.Cookie{Name: "jwt", Value: "faafdafs"})
 	resp := httptest.NewRecorder()
 
 	router.ServeHTTP(resp, req)
@@ -316,6 +313,7 @@ func TestGetFileContentById_ShouldReturn500_WhenUseCaseFails(t *testing.T) {
 		Return(&aggregate.FileContent{}, errors.New("use case error")).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/files/123/content", nil)
+	req.AddCookie(&http.Cookie{Name: "jwt", Value: "faafdafs"})
 	resp := httptest.NewRecorder()
 
 	router.ServeHTTP(resp, req)
@@ -350,6 +348,7 @@ func TestGetFileMetadataById_ShouldReturn200_WhenFileExists(t *testing.T) {
 		Return(&aggregate.FileContent{Metadata: file, Content: io.NopCloser(content)}, nil).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/files/123/metadata", nil)
+	req.AddCookie(&http.Cookie{Name: "jwt", Value: "faafdafs"})
 	resp := httptest.NewRecorder()
 
 	router.ServeHTTP(resp, req)
@@ -368,6 +367,7 @@ func TestGetFileMetadataById_ShouldReturn400_WhenIdMissing(t *testing.T) {
 	router.GET("/files/:id/metadata", controller.GetFileMetadataById)
 
 	req := httptest.NewRequest(http.MethodGet, "/files//metadata", nil)
+	req.AddCookie(&http.Cookie{Name: "jwt", Value: "faafdafs"})
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 
@@ -389,6 +389,7 @@ func TestGetFileMetadataById_ShouldReturn500_WhenUseCaseFails(t *testing.T) {
 		Return(&aggregate.FileContent{}, errors.New("use case error")).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/files/123/metadata", nil)
+	req.AddCookie(&http.Cookie{Name: "jwt", Value: "faafdafs"})
 	resp := httptest.NewRecorder()
 
 	router.ServeHTTP(resp, req)
@@ -411,6 +412,7 @@ func TestDeleteFile_ShouldReturn204WhenSuccess(t *testing.T) {
 		Return(nil).Once()
 
 	req := httptest.NewRequest(http.MethodDelete, "/files/123", nil)
+	req.AddCookie(&http.Cookie{Name: "jwt", Value: "faafdafs"})
 	resp := httptest.NewRecorder()
 
 	router.ServeHTTP(resp, req)
@@ -433,6 +435,7 @@ func TestDeleteFile_ShouldReturn500WhenFail(t *testing.T) {
 		Return(errors.New("Error on delete")).Once()
 
 	req := httptest.NewRequest(http.MethodDelete, "/files/123", nil)
+	req.AddCookie(&http.Cookie{Name: "jwt", Value: "faafdafs"})
 	resp := httptest.NewRecorder()
 
 	router.ServeHTTP(resp, req)
@@ -452,6 +455,7 @@ func TestDeleteFile_ShouldReturn400WhenIdMissing(t *testing.T) {
 	router.DELETE("/files/:id/delete", controller.DeleteFile)
 
 	req := httptest.NewRequest(http.MethodDelete, "/files//delete", nil)
+	req.AddCookie(&http.Cookie{Name: "jwt", Value: "faafdafs"})
 	resp := httptest.NewRecorder()
 
 	router.ServeHTTP(resp, req)
