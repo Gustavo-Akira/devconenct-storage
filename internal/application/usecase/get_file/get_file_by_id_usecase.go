@@ -7,17 +7,20 @@ import (
 	"devconnectstorage/internal/domain"
 	"devconnectstorage/internal/infraestructure/outbound/auth"
 	"errors"
+	"strconv"
 )
 
 type GetFileByIdUseCase struct {
 	repository port.FileRepository
 	storage    port.FileStorage
+	authClient auth.IAuthClient
 }
 
-func NewGetFileByIdUseCase(repository port.FileRepository, storage port.FileStorage) *GetFileByIdUseCase {
+func NewGetFileByIdUseCase(repository port.FileRepository, storage port.FileStorage, authClient auth.IAuthClient) *GetFileByIdUseCase {
 	return &GetFileByIdUseCase{
 		repository: repository,
 		storage:    storage,
+		authClient: authClient,
 	}
 }
 
@@ -28,11 +31,17 @@ func (uc *GetFileByIdUseCase) Execute(ctx context.Context, query GetFileByIdQuer
 		return &aggregate.FileContent{}, errors.New("token cannot be null")
 	}
 
+	profileId, authError := uc.authClient.GetProfile(token.(string))
+
+	if authError != nil {
+		return &aggregate.FileContent{}, authError
+	}
+
 	metadata, repositoryError := uc.repository.GetFile(ctx, query.Id)
 	if repositoryError != nil {
 		return &aggregate.FileContent{}, repositoryError
 	}
-	if metadata.Visibility() == domain.VisibilityPrivate && metadata.OwnerID() != token.(string) {
+	if metadata.Visibility() == domain.VisibilityPrivate && metadata.OwnerID() != strconv.FormatInt(*profileId, 10) {
 		return &aggregate.FileContent{}, errors.New("unauthorized")
 	}
 

@@ -45,7 +45,7 @@ func main() {
 
 	uploadFileUseCase := uploadfile.NewUploadFileUseCase(fileRepo, storage, idGenerator, authClient)
 
-	getFileUseCase := getfile.NewGetFileByIdUseCase(fileRepo, storage)
+	getFileUseCase := getfile.NewGetFileByIdUseCase(fileRepo, storage, authClient)
 
 	deleteFileUseCase := deletefile.NewDeleteFileUseCase(fileRepo, storage)
 
