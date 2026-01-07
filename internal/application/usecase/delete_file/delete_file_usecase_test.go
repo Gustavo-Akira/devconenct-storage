@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"devconnectstorage/internal/application/usecase/delete_file/port"
 	"devconnectstorage/internal/domain"
+	"devconnectstorage/internal/infraestructure/outbound/auth"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -26,8 +26,6 @@ func (m *RepositoryMock) DeleteFile(ctx context.Context, id string) error {
 	return args.Error(0)
 }
 
-var _ port.Repository = (*RepositoryMock)(nil)
-
 type StorageMock struct {
 	mock.Mock
 }
@@ -37,146 +35,109 @@ func (m *StorageMock) DeleteFile(ctx context.Context, file domain.File) error {
 	return args.Error(0)
 }
 
-var _ port.Storage = (*StorageMock)(nil)
-
-func TestDeleteFileUseCase_Execute_Success(t *testing.T) {
-	ctx := context.Background()
-
-	repo := new(RepositoryMock)
-	storage := new(StorageMock)
-
-	file, _ := domain.NewFile(
-		"1",
-		"1fds",
-		nil,
-		"fsfdsa",
-		"plain/text",
-		32,
-		domain.VisibilityPrivate,
-	)
-
-	repo.
-		On("GetFile", ctx, "file-id").
-		Return(file, nil)
-
-	storage.
-		On("DeleteFile", ctx, file).
-		Return(nil)
-
-	repo.
-		On("DeleteFile", ctx, "file-id").
-		Return(nil)
-
-	uc := DeleteFileUseCase{
-		repository: repo,
-		storage:    storage,
-	}
-
-	err := uc.Execute(ctx, DeleteFileCommand{Id: "file-id"})
-
-	assert.NoError(t, err)
-
-	repo.AssertExpectations(t)
-	storage.AssertExpectations(t)
+type AuthClientMock struct {
+	mock.Mock
 }
 
-func TestDeleteFileUseCase_Execute_ErrorOnGetFile(t *testing.T) {
-	ctx := context.Background()
-
-	repo := new(RepositoryMock)
-	storage := new(StorageMock)
-
-	expectedErr := errors.New("not found")
-
-	repo.
-		On("GetFile", ctx, "file-id").
-		Return(domain.File{}, expectedErr)
-
-	uc := DeleteFileUseCase{
-		repository: repo,
-		storage:    storage,
+func (m *AuthClientMock) GetProfile(token string) (*int64, error) {
+	args := m.Called(token)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
 	}
-
-	err := uc.Execute(ctx, DeleteFileCommand{Id: "file-id"})
-
-	assert.Equal(t, expectedErr, err)
-
-	repo.AssertExpectations(t)
-	storage.AssertNotCalled(t, "DeleteFile")
+	return args.Get(0).(*int64), args.Error(1)
 }
 
-func TestDeleteFileUseCase_Execute_ErrorOnStorageDelete(t *testing.T) {
-	ctx := context.Background()
+func TestDeleteFileUseCase_Execute(t *testing.T) {
+	const validToken = "valid-token"
 
-	repo := new(RepositoryMock)
-	storage := new(StorageMock)
+	ctxWithToken := context.WithValue(context.Background(), auth.AuthTokenKey, validToken)
 
-	file, _ := domain.NewFile(
-		"1",
-		"1fds",
-		nil,
-		"fsfdsa",
-		"plain/text",
-		32,
-		domain.VisibilityPrivate,
-	)
-	expectedErr := errors.New("storage error")
-
-	repo.
-		On("GetFile", ctx, "file-id").
-		Return(file, nil)
-
-	storage.
-		On("DeleteFile", ctx, file).
-		Return(expectedErr)
-
-	uc := DeleteFileUseCase{
-		repository: repo,
-		storage:    storage,
+	setup := func() (*RepositoryMock, *StorageMock, *AuthClientMock, *DeleteFileUseCase) {
+		repo := new(RepositoryMock)
+		storage := new(StorageMock)
+		authCli := new(AuthClientMock)
+		uc := NewDeleteFileUseCase(repo, storage, authCli)
+		return repo, storage, authCli, uc
 	}
 
-	err := uc.Execute(ctx, DeleteFileCommand{Id: "file-id"})
+	t.Run("Success", func(t *testing.T) {
+		repo, storage, authCli, uc := setup()
+		ownerIDStr := "123"
+		var ownerIDInt int64 = 123
+		file, _ := domain.NewFile("1", ownerIDStr, nil, "path", "text/plain", 32, domain.VisibilityPrivate)
 
-	assert.Equal(t, expectedErr, err)
+		authCli.On("GetProfile", validToken).Return(&ownerIDInt, nil)
+		repo.On("GetFile", ctxWithToken, "file-id").Return(file, nil)
+		storage.On("DeleteFile", ctxWithToken, file).Return(nil)
+		repo.On("DeleteFile", ctxWithToken, "file-id").Return(nil)
 
-	repo.AssertNotCalled(t, "DeleteFile", ctx, "file-id")
-}
+		err := uc.Execute(ctxWithToken, DeleteFileCommand{Id: "file-id"})
 
-func TestDeleteFileUseCase_Execute_ErrorOnRepositoryDelete(t *testing.T) {
-	ctx := context.Background()
+		assert.NoError(t, err)
+		authCli.AssertExpectations(t)
+		repo.AssertExpectations(t)
+		storage.AssertExpectations(t)
+	})
 
-	repo := new(RepositoryMock)
-	storage := new(StorageMock)
+	t.Run("Error No Token In Context", func(t *testing.T) {
+		_, _, _, uc := setup()
+		err := uc.Execute(context.Background(), DeleteFileCommand{Id: "file-id"})
 
-	file, _ := domain.NewFile(
-		"1",
-		"1fds",
-		nil,
-		"fsfdsa",
-		"plain/text",
-		32,
-		domain.VisibilityPrivate,
-	)
-	expectedErr := errors.New("db error")
+		assert.EqualError(t, err, "token cannot be null")
+	})
 
-	repo.
-		On("GetFile", ctx, "file-id").
-		Return(file, nil)
+	t.Run("Error Auth Client GetProfile", func(t *testing.T) {
+		repo, _, authCli, uc := setup()
+		expectedErr := errors.New("auth error")
 
-	storage.
-		On("DeleteFile", ctx, file).
-		Return(nil)
+		authCli.On("GetProfile", validToken).Return(nil, expectedErr)
 
-	repo.
-		On("DeleteFile", ctx, "file-id").
-		Return(expectedErr)
+		err := uc.Execute(ctxWithToken, DeleteFileCommand{Id: "file-id"})
 
-	uc := DeleteFileUseCase{
-		repository: repo,
-		storage:    storage,
-	}
+		assert.Equal(t, expectedErr, err)
+		repo.AssertNotCalled(t, "GetFile", mock.Anything, mock.Anything)
+	})
 
-	err := uc.Execute(ctx, DeleteFileCommand{Id: "file-id"})
+	t.Run("Error Unauthorized Owner", func(t *testing.T) {
+		repo, storage, authCli, uc := setup()
+		differentOwnerID := int64(456)
+		file, _ := domain.NewFile("1", "999", nil, "path", "text/plain", 32, domain.VisibilityPrivate)
 
-	assert.Equal(t, expectedErr, err)
+		authCli.On("GetProfile", validToken).Return(&differentOwnerID, nil)
+		repo.On("GetFile", ctxWithToken, "file-id").Return(file, nil)
+
+		err := uc.Execute(ctxWithToken, DeleteFileCommand{Id: "file-id"})
+
+		assert.EqualError(t, err, "unauthorized")
+		storage.AssertNotCalled(t, "DeleteFile", mock.Anything, mock.Anything)
+	})
+
+	t.Run("Error On GetFile", func(t *testing.T) {
+		repo, _, authCli, uc := setup()
+		expectedErr := errors.New("not found")
+		var ownerIDInt int64 = 123
+		authCli.On("GetProfile", validToken).Return(&ownerIDInt, nil)
+		repo.On("GetFile", ctxWithToken, "file-id").Return(domain.File{}, expectedErr)
+
+		err := uc.Execute(ctxWithToken, DeleteFileCommand{Id: "file-id"})
+
+		assert.Equal(t, expectedErr, err)
+	})
+
+	t.Run("Error On Storage Delete", func(t *testing.T) {
+		repo, storage, authCli, uc := setup()
+		ownerIDStr := "123"
+		var ownerIDInt int64 = 123
+		file, _ := domain.NewFile("1", ownerIDStr, nil, "path", "text/plain", 32, domain.VisibilityPrivate)
+		expectedErr := errors.New("storage error")
+
+		authCli.On("GetProfile", validToken).Return(&ownerIDInt, nil)
+		repo.On("GetFile", ctxWithToken, "file-id").Return(file, nil)
+		storage.On("DeleteFile", ctxWithToken, file).Return(expectedErr)
+
+		err := uc.Execute(ctxWithToken, DeleteFileCommand{Id: "file-id"})
+
+		assert.Equal(t, expectedErr, err)
+		repo.AssertNotCalled(t, "DeleteFile", ctxWithToken, "file-id")
+	})
 }

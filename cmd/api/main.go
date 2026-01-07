@@ -47,7 +47,7 @@ func main() {
 
 	getFileUseCase := getfile.NewGetFileByIdUseCase(fileRepo, storage, authClient)
 
-	deleteFileUseCase := deletefile.NewDeleteFileUseCase(fileRepo, storage)
+	deleteFileUseCase := deletefile.NewDeleteFileUseCase(fileRepo, storage, authClient)
 
 	fileController := rest.NewFileRestController(uploadFileUseCase, getFileUseCase, deleteFileUseCase)
 
