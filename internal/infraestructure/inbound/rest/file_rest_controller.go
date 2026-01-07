@@ -155,10 +155,21 @@ func (controller *FileRestController) DeleteFile(ctx *gin.Context) {
 		ctx.JSON(400, gin.H{"error": "id cannot be empty"})
 		return
 	}
+
+	jwt, err := ctx.Cookie("jwt")
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": err.Error()})
+		return
+	}
+	ctxWithToken := context.WithValue(
+		ctx.Request.Context(),
+		auth.AuthTokenKey,
+		jwt,
+	)
 	command := deletefile.DeleteFileCommand{
 		Id: id,
 	}
-	err := controller.deleteFile.Execute(ctx.Request.Context(), command)
+	err = controller.deleteFile.Execute(ctxWithToken, command)
 	if err != nil {
 		ctx.JSON(500, gin.H{"error": err.Error()})
 		return
